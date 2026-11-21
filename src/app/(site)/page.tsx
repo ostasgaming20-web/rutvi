@@ -111,7 +111,7 @@ export default async function HomePage() {
       <CustomizationShowcase />
       <HamperShowcase hampers={hampers} />
       <WhyChoose stats={settings.stats} />
-      <HowItWorks />
+      <HowItWorks contactEmail={settings.contact.email} />
 
       {testimonials.length > 0 && (
         <section className="bg-[#fffdf9] py-20">
