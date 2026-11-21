@@ -155,7 +155,7 @@ export default function GiftBoxPreview({
 
   return (
     <Canvas
-      shadows
+      shadows="percentage"
       dpr={[1, 1.6]}
       camera={{ position: [4.6, 3.4, 5.6], fov: 32 }}
       gl={{ antialias: true, alpha: true }}

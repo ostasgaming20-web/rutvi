@@ -61,7 +61,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body className={`${manrope.variable} ${cormorant.variable} font-sans antialiased`}>
         <TooltipProvider>
           <Toaster />

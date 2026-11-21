@@ -252,7 +252,7 @@ function Particles() {
 export default function GiftBoxScene({ reduced = false }: { reduced?: boolean }) {
   return (
     <Canvas
-      shadows
+      shadows="percentage"
       dpr={[1, 1.6]}
       camera={{ position: [0, 2.35, 9.2], fov: 36 }}
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
