@@ -16,7 +16,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  allowedDevOrigins: ['*'],
+  allowedDevOrigins: [
+    // Preview hosts are subdomains of these; a bare "*" is rejected by Next.
+    "**.e2b.app",
+    "**.e2b.dev",
+    "**.ideavo.ai",
+    "**.ideavo.dev",
+  ],
   typescript: {
     ignoreBuildErrors: true,
   },
