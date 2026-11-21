@@ -26,7 +26,13 @@ const nextConfig: NextConfig = {
   turbopack: {
     rules: {
       "*.{jsx,tsx}": {
-        condition: { not: 'foreign' },
+        condition: {
+          all: [
+            { not: 'foreign' },
+            // react-three-fiber elements crash when given extra DOM props
+            { not: { path: /src\/components\/three\// } },
+          ],
+        },
         loaders: [require.resolve('@ideavo/webpack-tagger')],
       },
     },

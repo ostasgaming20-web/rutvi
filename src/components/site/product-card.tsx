@@ -46,7 +46,7 @@ export function ProductCard({
         className="tilt-card group relative flex h-full flex-col overflow-hidden rounded-xl border border-ink/7 bg-[#fffdf9]"
       >
         <div className="relative aspect-[4/5] overflow-hidden bg-cream">
-          <Link href={`/products/${product.slug}`} aria-label={product.name} className="block size-full">
+          <Link href={`/products/${product.slug}`} aria-label={product.name} className="relative block size-full">
             {product.image ? (
               <Image
                 src={product.image}
