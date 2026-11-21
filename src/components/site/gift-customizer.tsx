@@ -36,7 +36,13 @@ type ProductOption = {
   productType: string;
 };
 
-type CustomizationOption = { id: number; name: string; slug: string; priceNote: string | null };
+type CustomizationOption = {
+  id: number;
+  name: string;
+  slug: string;
+  priceNote: string | null;
+  description: string | null;
+};
 
 const steps = [
   "Product",

@@ -9,9 +9,9 @@ import { formatINR } from "@/lib/format";
 import { SectionHeading } from "@/components/site/section-heading";
 
 function HamperCard({ hamper }: { hamper: ProductCardData }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLAnchorElement>(null);
 
-  function move(event: React.MouseEvent<HTMLDivElement>) {
+  function move(event: React.MouseEvent<HTMLAnchorElement>) {
     const card = ref.current;
     if (!card || window.matchMedia("(pointer: coarse)").matches) return;
     const rect = card.getBoundingClientRect();
@@ -27,7 +27,7 @@ function HamperCard({ hamper }: { hamper: ProductCardData }) {
   return (
     <Link
       href={`/products/${hamper.slug}`}
-      ref={ref as unknown as React.Ref<HTMLAnchorElement>}
+      ref={ref}
       onMouseMove={move}
       onMouseLeave={leave}
       className="tilt-card group relative block overflow-hidden rounded-2xl border border-ivory/10 bg-[#10233f]"
