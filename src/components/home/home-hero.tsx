@@ -12,6 +12,11 @@ const GiftBoxScene = dynamic(() => import("@/components/three/gift-box-scene"), 
   loading: () => null,
 });
 
+const GiftBoxViewer = dynamic(() => import("@/components/three/gift-box-viewer"), {
+  ssr: false,
+  loading: () => null,
+});
+
 function supportsWebGL() {
   try {
     const canvas = document.createElement("canvas");
@@ -30,6 +35,7 @@ export function HomeHero({ hero, image }: { hero: HeroSettings; image: string })
   const [ready, setReady] = useState(false);
   const [open, setOpen] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [showroom, setShowroom] = useState(false);
   const autoOpened = useRef(false);
 
   useEffect(() => {
@@ -62,9 +68,10 @@ export function HomeHero({ hero, image }: { hero: HeroSettings; image: string })
     };
   }, []);
 
-  function toggleBox() {
+  function enterShowroom() {
     setHasInteracted(true);
-    setOpen((value) => !value);
+    setOpen(true);
+    setShowroom(true);
   }
 
   return (
@@ -127,7 +134,7 @@ export function HomeHero({ hero, image }: { hero: HeroSettings; image: string })
             <div
               className={`absolute inset-0 transition-opacity duration-1000 ${ready ? "opacity-100" : "opacity-0"}`}
             >
-              <GiftBoxScene open={open} onToggle={toggleBox} reduced={reduced} />
+              <GiftBoxScene open={open} onToggle={enterShowroom} reduced={reduced} />
             </div>
           ) : (
             <div className="absolute inset-0 overflow-hidden rounded-[2rem]">
@@ -144,11 +151,11 @@ export function HomeHero({ hero, image }: { hero: HeroSettings; image: string })
 
           <button
             type="button"
-            onClick={toggleBox}
-            className="absolute bottom-3 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-2 rounded-full border border-ink/10 bg-white/75 px-4 py-2 text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-ink/65 shadow-[0_12px_30px_-22px_rgba(20,19,15,0.7)] backdrop-blur transition-colors hover:border-navy/30 hover:text-navy"
+            onClick={enterShowroom}
+            className="absolute bottom-3 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-2 rounded-full border border-ink/10 bg-white/80 px-4 py-2.5 text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-ink/65 shadow-[0_12px_30px_-22px_rgba(20,19,15,0.7)] backdrop-blur transition-colors hover:border-navy/30 hover:text-navy"
           >
             <MousePointerClick className="size-3.5 text-gold" />
-            {open ? "Close the gift box" : "Click the gift box to unwrap"}
+            Click the gift box to enter the showroom
           </button>
 
           {open && hasInteracted && (
@@ -159,6 +166,8 @@ export function HomeHero({ hero, image }: { hero: HeroSettings; image: string })
           )}
         </div>
       </div>
+
+      {showroom && webgl && <GiftBoxViewer onClose={() => setShowroom(false)} />}
 
       <div className="container-lux relative z-10 flex items-center justify-between pb-7">
         <div className="flex items-center gap-3 text-[0.62rem] font-medium uppercase tracking-[0.2em] text-ink/40">

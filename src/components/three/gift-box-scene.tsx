@@ -337,19 +337,29 @@ function ProductMesh({ kind }: { kind: ProductKind }) {
 
 /* ----------------------------------- rig ---------------------------------- */
 
-function Rig({
+export function GiftBoxRig({
   openRef,
   reduced,
   hoveredRef,
   onHover,
   onToggle,
+  cameraMode = "hero",
+  onSettled,
+  onClosed,
+  duration,
 }: {
   openRef: React.RefObject<number>;
   reduced: boolean;
   hoveredRef: React.RefObject<number | null>;
   onHover: (index: number | null) => void;
   onToggle: () => void;
+  cameraMode?: "hero" | "viewer";
+  onSettled?: () => void;
+  onClosed?: () => void;
+  duration?: number;
 }) {
+  const settled = useRef(false);
+  const closed = useRef(true);
   const root = useRef<THREE.Group>(null);
   const lid = useRef<THREE.Group>(null);
   const bow = useRef<THREE.Group>(null);
@@ -367,7 +377,17 @@ function Rig({
     const dt = Math.min(delta, 0.05);
     const t = state.clock.getElapsedTime();
     const target = reduced ? 1 : openRef.current;
-    progress.current = reduced ? 1 : THREE.MathUtils.damp(progress.current, target, 1.25, dt);
+    if (reduced) {
+      progress.current = 1;
+    } else if (duration) {
+      // wall-clock driven so the sequence completes in the same time on any device
+      const step = delta / duration;
+      progress.current = target > progress.current
+        ? Math.min(1, progress.current + step)
+        : Math.max(0, progress.current - step);
+    } else {
+      progress.current = THREE.MathUtils.damp(progress.current, target, 1.25, dt);
+    }
     const p = progress.current;
 
     intro.current = reduced ? 1 : Math.min(1, intro.current + dt * 0.55);
@@ -375,27 +395,34 @@ function Rig({
 
     const pointer = reduced ? { x: 0, y: 0 } : state.pointer;
 
-    // camera: cinematic approach + subtle parallax
-    const camX = pointer.x * 0.26;
-    const camY = 3.95 - 1.35 * i + pointer.y * 0.16;
-    const camZ = 10.9 - 2.55 * i;
-    camera.position.x = THREE.MathUtils.damp(camera.position.x, camX, 3, dt);
-    camera.position.y = THREE.MathUtils.damp(camera.position.y, camY, 3, dt);
-    camera.position.z = THREE.MathUtils.damp(camera.position.z, camZ, 3, dt);
-    camera.lookAt(0, 1.32 + pointer.y * 0.04, 0);
+    // hero: cinematic approach + subtle parallax. viewer: OrbitControls owns the camera.
+    if (cameraMode === "hero") {
+      const camX = pointer.x * 0.26;
+      const camY = 3.95 - 1.35 * i + pointer.y * 0.16;
+      const camZ = 10.9 - 2.55 * i;
+      camera.position.x = THREE.MathUtils.damp(camera.position.x, camX, 3, dt);
+      camera.position.y = THREE.MathUtils.damp(camera.position.y, camY, 3, dt);
+      camera.position.z = THREE.MathUtils.damp(camera.position.z, camZ, 3, dt);
+      camera.lookAt(0, 1.32 + pointer.y * 0.04, 0);
+    }
 
     // box settle + parallax tilt
     if (root.current) {
       const scale = 0.88 + 0.12 * i;
       root.current.scale.setScalar(scale);
       root.current.position.y = -0.35 + 0.35 * i + Math.sin(t * 0.55) * 0.018 * (reduced ? 0 : 1);
-      root.current.rotation.y = THREE.MathUtils.damp(
-        root.current.rotation.y,
-        pointer.x * 0.16 + Math.sin(t * 0.2) * 0.02,
-        2.4,
-        dt,
-      );
-      root.current.rotation.x = THREE.MathUtils.damp(root.current.rotation.x, -pointer.y * 0.05, 2.4, dt);
+      if (cameraMode === "hero") {
+        root.current.rotation.y = THREE.MathUtils.damp(
+          root.current.rotation.y,
+          pointer.x * 0.16 + Math.sin(t * 0.2) * 0.02,
+          2.4,
+          dt,
+        );
+        root.current.rotation.x = THREE.MathUtils.damp(root.current.rotation.x, -pointer.y * 0.05, 2.4, dt);
+      } else {
+        root.current.rotation.y = THREE.MathUtils.damp(root.current.rotation.y, 0, 4, dt);
+        root.current.rotation.x = THREE.MathUtils.damp(root.current.rotation.x, 0, 4, dt);
+      }
     }
 
     // ribbon unties (0 → 0.2), rewraps on close
@@ -458,6 +485,19 @@ function Rig({
       group.scale.setScalar(base * (hovered ? 1.07 : 1));
       group.visible = r > 0.002;
     });
+
+    if (target > 0.5 && p > 0.995 && !settled.current) {
+      settled.current = true;
+      closed.current = false;
+      onSettled?.();
+    }
+    if (target < 0.5) {
+      settled.current = false;
+      if (p < 0.006 && !closed.current) {
+        closed.current = true;
+        onClosed?.();
+      }
+    }
   });
 
   return (
@@ -617,7 +657,7 @@ function Rig({
 
 /* --------------------------------- lights --------------------------------- */
 
-function Studio() {
+export function StudioLights() {
   return (
     <>
       <ambientLight intensity={0.62} color="#fff7ec" />
@@ -680,8 +720,8 @@ export default function GiftBoxScene({
       aria-label="Interactive 3D corporate gift box"
     >
       <Suspense fallback={null}>
-        <Studio />
-        <Rig
+        <StudioLights />
+        <GiftBoxRig
           openRef={openRef}
           reduced={reduced}
           hoveredRef={hoveredRef}
