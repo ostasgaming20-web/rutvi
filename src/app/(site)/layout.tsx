@@ -1,11 +1,16 @@
-import { getCategories } from "@/lib/queries";
+import { getCategories, getCategoriesWithProducts } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
 import { SiteHeader } from "@/components/site/site-header";
 import { SiteFooter } from "@/components/site/site-footer";
 import { WhatsAppFloat } from "@/components/site/whatsapp-float";
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const [settings, categories] = await Promise.all([getSettings(), getCategories()]);
+  const [settings, allCategories, categoryWithProducts] = await Promise.all([
+    getSettings(),
+    getCategories(),
+    getCategoriesWithProducts(),
+  ]);
+  const categories = allCategories.filter((category) => categoryWithProducts.has(category.id));
 
   const jsonLd = {
     "@context": "https://schema.org",

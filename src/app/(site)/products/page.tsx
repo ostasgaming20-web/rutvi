@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PackageSearch } from "lucide-react";
-import { getCatalogue, getCategories } from "@/lib/queries";
+import { getCatalogue, getCategories, getCategoriesWithProducts } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
 import { ProductCard } from "@/components/site/product-card";
 import { CatalogueFiltersBar, Pagination } from "@/components/site/catalogue-filters";
@@ -29,11 +29,14 @@ export default async function ProductsPage({
   const sort = single(params.sort);
   const page = Number(single(params.page) ?? "1") || 1;
 
-  const [settings, categories, catalogue] = await Promise.all([
+  const [settings, allCategories, categoryWithProducts, catalogue] = await Promise.all([
     getSettings(),
-    getCategories(),
+    getCategories("product"),
+    getCategoriesWithProducts(),
     getCatalogue({ q, category, price, sort, page, pageSize: 12 }),
   ]);
+
+  const categories = allCategories.filter((item) => categoryWithProducts.has(item.id));
 
   const activeCategory = categories.find((item) => item.slug === category);
 

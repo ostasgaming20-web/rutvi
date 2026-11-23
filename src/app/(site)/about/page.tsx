@@ -110,7 +110,7 @@ export default async function AboutPage() {
         <div className="container-lux grid gap-10 lg:grid-cols-2 lg:items-center">
           <div className="relative aspect-[5/4] overflow-hidden rounded-2xl">
             <Image
-              src="https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=1200&q=82"
+              src="/uploads/products/re003d-gift-set.jpg"
               alt="Premium gift box with satin ribbon"
               fill
               sizes="(max-width: 1024px) 100vw, 50vw"

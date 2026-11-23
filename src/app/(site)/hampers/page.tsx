@@ -43,12 +43,12 @@ export default async function HampersPage({
     <>
       <section className="relative overflow-hidden bg-navy">
         <Image
-          src="https://images.unsplash.com/photo-1607344645866-009c320b63e0?auto=format&fit=crop&w=1600&q=82"
-          alt="Premium corporate hamper with curated gifts"
+          src="/uploads/products/gift-bags.jpg"
+          alt="RUTVI ENTERPRISE premium gift packaging"
           fill
           priority
           sizes="100vw"
-          className="object-cover opacity-45"
+          className="object-cover opacity-25"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-[#081426] via-[#081426]/85 to-[#081426]/30" />
         <div className="container-lux relative py-20 md:py-28">
@@ -69,7 +69,7 @@ export default async function HampersPage({
             </Link>
           </div>
           <div className="mt-10 flex flex-wrap gap-x-8 gap-y-3 text-[0.65rem] uppercase tracking-[0.12em] text-ivory/55">
-            <span className="inline-flex items-center gap-2"><Gift className="size-4 text-gold" /> 7 hamper collections</span>
+            <span className="inline-flex items-center gap-2"><Gift className="size-4 text-gold" /> Custom hamper builds</span>
             <span className="inline-flex items-center gap-2"><Ribbon className="size-4 text-gold" /> Branded packaging</span>
             <span className="inline-flex items-center gap-2"><PackageCheck className="size-4 text-gold" /> MOQ from 10</span>
           </div>
@@ -90,6 +90,24 @@ export default async function HampersPage({
               <ProductCard key={hamper.id} product={hamper} whatsapp={settings.contact.whatsapp} priority={index < 3} />
             ))}
           </div>
+          {catalogue.products.length === 0 && (
+            <div className="surface rounded-2xl px-6 py-16 text-center">
+              <Gift className="mx-auto size-7 text-gold" />
+              <h2 className="mt-5 text-lg font-semibold">Hamper photography is being updated</h2>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-stone">
+                Our hamper collection is being photographed. Tell us the occasion, budget and quantity and we will
+                send a curated proposal with options within one business day.
+              </p>
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
+                <Link href="/quote" className="btn-base btn-navy">
+                  Request a hamper quote
+                </Link>
+                <Link href="/customize" className="btn-base btn-ghost">
+                  Build a custom hamper
+                </Link>
+              </div>
+            </div>
+          )}
           <Pagination base="/hampers" page={catalogue.page} totalPages={catalogue.totalPages} params={{ q, category, price, sort }} />
         </div>
       </section>
@@ -118,7 +136,7 @@ export default async function HampersPage({
           </div>
           <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
             <Image
-              src="https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=1200&q=82"
+              src="/uploads/products/gift-bags.jpg"
               alt="Custom corporate hamper packaging"
               fill
               sizes="(max-width: 1024px) 100vw, 50vw"

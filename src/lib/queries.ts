@@ -67,6 +67,15 @@ export async function getCategories(kind?: "product" | "hamper") {
     .orderBy(asc(categories.sortOrder));
 }
 
+export async function getCategoriesWithProducts() {
+  const rows = await db
+    .select({ categoryId: products.categoryId })
+    .from(products)
+    .where(eq(products.isActive, true))
+    .groupBy(products.categoryId);
+  return new Set(rows.map((row) => row.categoryId));
+}
+
 export async function getFeaturedProducts(limit = 8) {
   const rows = await db
     .select(cardSelect)

@@ -5,6 +5,7 @@ import { ArrowRight, Sparkles } from "lucide-react";
 import { getSettings } from "@/lib/settings";
 import {
   getCategories,
+  getCategoriesWithProducts,
   getCustomizationOptions,
   getFeaturedHampers,
   getFeaturedProducts,
@@ -43,9 +44,10 @@ const marquee = [
 ];
 
 export default async function HomePage() {
-  const [settings, categories, featured, hampers, products, customizationOptions, testimonials] = await Promise.all([
+  const [settings, categories, categoryWithProducts, featured, hampers, products, customizationOptions, testimonials] = await Promise.all([
     getSettings(),
     getCategories(),
+    getCategoriesWithProducts(),
     getFeaturedProducts(8),
     getFeaturedHampers(3),
     getProductsForSelect(),
@@ -57,7 +59,7 @@ export default async function HomePage() {
     <ScrollReveal>
       <HomeHero
         hero={settings.hero}
-        image="https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=1400&q=82"
+        image="/uploads/products/re003d-gift-set.jpg"
       />
       <BusinessHighlights />
 
@@ -72,7 +74,7 @@ export default async function HomePage() {
         </div>
       </div>
 
-      <ExploreCategories categories={categories} />
+      <ExploreCategories categories={categories.filter((category) => categoryWithProducts.has(category.id))} />
 
       <section className="bg-[#fffdf9] py-20 md:py-28">
         <div className="container-lux">
@@ -98,7 +100,7 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {featured.map((product, index) => (
               <div key={product.id} data-reveal>
                 <ProductCard product={product} whatsapp={settings.contact.whatsapp} priority={index < 2} />
@@ -109,7 +111,7 @@ export default async function HomePage() {
       </section>
 
       <CustomizationShowcase />
-      <HamperShowcase hampers={hampers} />
+      {hampers.length > 0 && <HamperShowcase hampers={hampers} />}
       <WhyChoose stats={settings.stats} />
       <HowItWorks contactEmail={settings.contact.email} />
 
@@ -161,7 +163,7 @@ export default async function HomePage() {
             <div className="relative mt-10 hidden max-w-md sm:block">
               <div className="relative aspect-[16/10] overflow-hidden rounded-xl border border-ivory/10">
                 <Image
-                  src="https://images.unsplash.com/photo-1513201099705-a9746e1e201f?auto=format&fit=crop&w=1000&q=82"
+                  src="/uploads/products/gift-bags.jpg"
                   alt="A curated corporate gift hamper"
                   fill
                   sizes="420px"

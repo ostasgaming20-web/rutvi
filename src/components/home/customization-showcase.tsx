@@ -10,35 +10,35 @@ const techniques = [
     title: "Logo printing",
     description:
       "Screen, pad and UV printing reproduce your mark with crisp edges on paper, metal and fabric. Best for flat surfaces and multi-colour artwork.",
-    image: "https://images.unsplash.com/photo-1607083206968-13611e3d76db?auto=format&fit=crop&w=1200&q=82",
+    image: "/uploads/products/re101p-metal-pen.jpg",
     detail: "Up to 4 colours · from ₹15 per unit",
   },
   {
     title: "Laser engraving",
     description:
       "A permanent, tactile mark etched into metal, wood and leather. Ideal for pens, bottles, desk objects and executive gifts that should age well.",
-    image: "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=1200&q=82",
+    image: "/uploads/products/re002d-notebook-diary.jpg",
     detail: "Permanent finish · from ₹40 per unit",
   },
   {
     title: "Embossing",
     description:
       "Raised or debossed branding on leather and paper adds a quiet, tactile luxury that printed logos cannot match.",
-    image: "https://images.unsplash.com/photo-1547949003-9792a18a2601?auto=format&fit=crop&w=1200&q=82",
+    image: "/uploads/products/re003d-gift-set.jpg",
     detail: "Blind or foil · from ₹35 per unit",
   },
   {
     title: "Personalised packaging",
     description:
       "Printed sleeves, name tags, tissue and custom inserts turn a good gift into a considered unboxing moment.",
-    image: "https://images.unsplash.com/photo-1513201099705-a9746e1e201f?auto=format&fit=crop&w=1200&q=82",
+    image: "/uploads/products/gift-bags.jpg",
     detail: "Fully custom · quoted per brief",
   },
   {
     title: "Custom gift boxes",
     description:
       "Rigid boxes built to size, wrapped in your chosen material and finished with satin ribbon, foil or a magnetic closure.",
-    image: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=1200&q=82",
+    image: "/uploads/products/re004d-diary-stand.jpg",
     detail: "Made to order · from ₹180 per unit",
   },
 ];

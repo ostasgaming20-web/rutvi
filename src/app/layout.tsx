@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     siteName: "RUTVI ENTERPRISE",
     images: [
       {
-        url: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=1200&q=82",
+        url: "/uploads/products/re003d-gift-set.jpg",
         width: 1200,
         height: 630,
         alt: "RUTVI ENTERPRISE premium corporate gifting",
