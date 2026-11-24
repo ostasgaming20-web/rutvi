@@ -4,9 +4,9 @@ import Link from "next/link";
 import { ArrowLeft, Save } from "lucide-react";
 import type { Category } from "@/lib/db/schema";
 import { ImageField } from "@/components/admin/image-field";
-import { SubmitButton } from "@/components/admin/submit-button";
+import { AdminSubmit } from "@/components/admin/admin-submit";
 
-type ProductFormData = {
+export type ProductFormValues = {
   id?: number;
   name: string;
   slug: string;
@@ -15,6 +15,11 @@ type ProductFormData = {
   description: string | null;
   categoryId: number;
   pricePaise: number | null;
+  discountPricePaise: number | null;
+  material: string | null;
+  size: string | null;
+  tags: string[];
+  collection: string | null;
   minOrderQty: number;
   colors: string[];
   specifications: { label: string; value: string }[];
@@ -25,199 +30,309 @@ type ProductFormData = {
   availability: string;
   isFeatured: boolean;
   isActive: boolean;
+  isArchived: boolean;
   images: { url: string }[];
 };
+
+function rupees(paise: number | null) {
+  if (paise === null || paise === undefined) return "";
+  return (paise / 100).toFixed(0);
+}
 
 export function ProductForm({
   categories,
   customizationOptions,
   product,
   action,
+  isHamper = false,
 }: {
   categories: Category[];
   customizationOptions: { id: number; name: string }[];
-  product?: ProductFormData;
+  product?: ProductFormValues;
   action: (formData: FormData) => void | Promise<void>;
+  isHamper?: boolean;
 }) {
+  const label = isHamper ? "hamper" : "product";
+
   return (
     <form action={action} className="space-y-5">
       {product?.id && <input type="hidden" name="id" value={product.id} />}
+      <input type="hidden" name="productType" value={isHamper ? "hamper" : product?.productType ?? "product"} />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <Link href="/admin/products" className="inline-flex items-center gap-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-stone hover:text-navy">
-            <ArrowLeft className="size-3" /> Back to products
+          <Link
+            href={isHamper ? "/admin/hampers" : "/admin/products"}
+            className="inline-flex items-center gap-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-[#8b919d] hover:text-[#0d1f3c]"
+          >
+            <ArrowLeft className="size-3" /> Back to {isHamper ? "hampers" : "products"}
           </Link>
-          <h1 className="display mt-2 text-3xl text-ink">{product ? "Edit product" : "Add a product"}</h1>
-          <p className="mt-1 text-xs text-stone">Changes go live on the website immediately.</p>
+          <h1 className="mt-1 text-[1.5rem] font-semibold tracking-[-0.02em] text-[#14161a]">
+            {product ? `Edit ${label}` : `Add a ${label}`}
+          </h1>
+          <p className="mt-0.5 text-[0.72rem] text-[#8b919d]">Changes are saved immediately to the live catalogue.</p>
         </div>
-        <SubmitButton>
-          <Save className="size-4" /> {product ? "Save changes" : "Create product"}
-        </SubmitButton>
+        <AdminSubmit>
+          <Save className="size-3.5" /> {product ? "Save changes" : `Create ${label}`}
+        </AdminSubmit>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1.35fr_0.65fr]">
+      <div className="grid gap-5 lg:grid-cols-[1.4fr_0.6fr]">
         <div className="space-y-5">
-          <section className="surface rounded-xl p-5">
-            <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-ink/60">Basics</h2>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className="field-label" htmlFor="name">Product name *</label>
-                <input id="name" name="name" defaultValue={product?.name} className="field" required />
-              </div>
-              <div>
-                <label className="field-label" htmlFor="sku">SKU *</label>
-                <input id="sku" name="sku" defaultValue={product?.sku} className="field" required />
-              </div>
-              <div>
-                <label className="field-label" htmlFor="slug">URL slug</label>
-                <input id="slug" name="slug" defaultValue={product?.slug} className="field" placeholder="auto from name" />
-              </div>
-              <div>
-                <label className="field-label" htmlFor="categoryId">Category *</label>
-                <select id="categoryId" name="categoryId" defaultValue={product?.categoryId ?? ""} className="field" required>
-                  <option value="">Select a category</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name} {category.kind === "hamper" ? "(hamper)" : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="field-label" htmlFor="productType">Type</label>
-                <select id="productType" name="productType" defaultValue={product?.productType ?? "product"} className="field">
-                  <option value="product">Product</option>
-                  <option value="hamper">Hamper</option>
-                </select>
-              </div>
-              <div className="sm:col-span-2">
-                <label className="field-label" htmlFor="shortDescription">Short description</label>
-                <input id="shortDescription" name="shortDescription" defaultValue={product?.shortDescription ?? ""} className="field" maxLength={180} />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="field-label" htmlFor="description">Full description</label>
-                <textarea id="description" name="description" defaultValue={product?.description ?? ""} rows={5} className="field resize-y" />
-              </div>
-            </div>
-          </section>
-
-          <section className="surface rounded-xl p-5">
-            <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-ink/60">Pricing &amp; order</h2>
-            <div className="mt-4 grid gap-4 sm:grid-cols-3">
-              <div>
-                <label className="field-label" htmlFor="price">Price per unit (₹)</label>
+          <section className="rounded-xl border border-black/7 bg-white p-4 md:p-5">
+            <h2 className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-[#a07f45]">Basics</h2>
+            <div className="space-y-3">
+              <label className="block">
+                <span className="mb-1 block text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-[#6b7280]">Name</span>
                 <input
-                  id="price"
-                  name="price"
-                  type="number"
-                  min={0}
-                  step="1"
-                  defaultValue={product?.pricePaise ? product.pricePaise / 100 : ""}
-                  className="field"
-                  placeholder="Leave blank for on request"
+                  name="name"
+                  required
+                  defaultValue={product?.name ?? ""}
+                  className="w-full rounded-lg border border-black/10 px-3 py-2 text-[0.82rem] outline-none focus:border-[#0d1f3c] focus:ring-2 focus:ring-[#0d1f3c]/10"
                 />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="SKU / Product ID" name="sku" defaultValue={product?.sku} placeholder="RE-101P" />
+                <Field label="URL slug (optional)" name="slug" defaultValue={product?.slug} placeholder="auto-generated" />
               </div>
-              <div>
-                <label className="field-label" htmlFor="minOrderQty">Minimum order qty</label>
-                <input id="minOrderQty" name="minOrderQty" type="number" min={1} defaultValue={product?.minOrderQty ?? 10} className="field" />
-              </div>
-              <div>
-                <label className="field-label" htmlFor="availability">Availability</label>
-                <select id="availability" name="availability" defaultValue={product?.availability ?? "in_stock"} className="field">
-                  <option value="in_stock">In stock</option>
-                  <option value="made_to_order">Made to order</option>
-                  <option value="out_of_stock">Out of stock</option>
-                </select>
+              <TextArea label="Short description" name="shortDescription" defaultValue={product?.shortDescription} rows={2} />
+              <TextArea label="Full description" name="description" defaultValue={product?.description} rows={5} />
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-black/7 bg-white p-4 md:p-5">
+            <h2 className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-[#a07f45]">Pricing & availability</h2>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field label="Price (₹)" name="price" type="number" step="1" min="0" defaultValue={rupees(product?.pricePaise ?? null)} />
+              <Field label="Discounted price (₹)" name="discountPrice" type="number" step="1" min="0" defaultValue={rupees(product?.discountPricePaise ?? null)} hint="Optional" />
+              <Field label="Minimum order qty" name="minOrderQty" type="number" min="1" defaultValue={product?.minOrderQty ?? 10} />
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <Select
+                label="Availability"
+                name="availability"
+                defaultValue={product?.availability ?? "in_stock"}
+                options={[
+                  { value: "in_stock", label: "In stock" },
+                  { value: "made_to_order", label: "Made to order" },
+                  { value: "out_of_stock", label: "Out of stock" },
+                  { value: "discontinued", label: "Discontinued" },
+                ]}
+              />
+              <Select
+                label="Collection"
+                name="collection"
+                defaultValue={product?.collection ?? ""}
+                options={[
+                  { value: "", label: "None" },
+                  { value: "festival", label: "Festival" },
+                  { value: "corporate", label: "Corporate" },
+                  { value: "executive", label: "Executive" },
+                  { value: "seasonal", label: "Seasonal" },
+                  { value: "employee", label: "Employee gifting" },
+                ]}
+              />
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-black/7 bg-white p-4 md:p-5">
+            <h2 className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-[#a07f45]">Details</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Material" name="material" defaultValue={product?.material} placeholder="Leatherette, metal…" />
+              <Field label="Size" name="size" defaultValue={product?.size} placeholder="A5, 21 × 14 cm" />
+              <Field label="Colours (comma separated)" name="colors" defaultValue={product?.colors.join(", ")} className="sm:col-span-2" />
+              <Field label="Tags (comma separated)" name="tags" defaultValue={product?.tags.join(", ")} className="sm:col-span-2" />
+              <TextArea
+                label="Specifications (one per line, Label: Value)"
+                name="specifications"
+                defaultValue={product?.specifications.map((spec) => `${spec.label}: ${spec.value}`).join("\n")}
+                rows={4}
+                className="sm:col-span-2"
+              />
+              <TextArea
+                label={isHamper ? "Hamper contents (one per line)" : "Box contents (one per line)"}
+                name="contents"
+                defaultValue={product?.contents.join("\n")}
+                rows={isHamper ? 4 : 3}
+                className="sm:col-span-2"
+              />
+              <Field label="Packaging" name="packaging" defaultValue={product?.packaging} className="sm:col-span-2" />
+            </div>
+
+            <div className="mt-3">
+              <span className="mb-1.5 block text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-[#6b7280]">
+                Customisation options
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {customizationOptions.map((option) => (
+                  <label key={option.id} className="flex items-center gap-1.5 rounded-lg border border-black/10 px-2.5 py-1.5 text-[0.7rem]">
+                    <input
+                      type="checkbox"
+                      name="customizationOptions"
+                      value={option.name}
+                      defaultChecked={product?.customizationOptions.includes(option.name)}
+                      className="size-3.5 accent-[#0d1f3c]"
+                    />
+                    {option.name}
+                  </label>
+                ))}
               </div>
             </div>
           </section>
 
-          <section className="surface rounded-xl p-5">
-            <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-ink/60">Customisation &amp; contents</h2>
-            <div className="mt-4 space-y-4">
-              <div>
-                <label className="field-label" htmlFor="colors">Available colours</label>
-                <input id="colors" name="colors" defaultValue={product?.colors.join(", ")} className="field" placeholder="Navy, Ivory, Charcoal" />
-                <p className="mt-1 text-[0.6rem] text-stone">Comma-separated.</p>
-              </div>
-              <div>
-                <span className="field-label">Customisation options</span>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {customizationOptions.map((option) => (
-                    <label key={option.id} className="flex items-center gap-2 rounded-lg border border-ink/10 px-3 py-2 text-xs text-ink/70">
-                      <input
-                        type="checkbox"
-                        name="customizationOptions"
-                        value={option.name}
-                        defaultChecked={product?.customizationOptions.includes(option.name)}
-                        className="size-3.5 accent-[#0d1f3c]"
-                      />
-                      {option.name}
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="field-label" htmlFor="specifications">Specifications</label>
-                <textarea
-                  id="specifications"
-                  name="specifications"
-                  rows={4}
-                  defaultValue={product?.specifications.map((spec) => `${spec.label}: ${spec.value}`).join("\n")}
-                  className="field resize-y"
-                  placeholder={"Material: Full-grain leather\nSize: A5\nBranding: Deboss"}
-                />
-                <p className="mt-1 text-[0.6rem] text-stone">One per line, formatted as Label: Value.</p>
-              </div>
-              <div>
-                <label className="field-label" htmlFor="contents">Hamper contents</label>
-                <textarea id="contents" name="contents" rows={3} defaultValue={product?.contents.join("\n")} className="field resize-y" placeholder="One item per line" />
-              </div>
-              <div>
-                <label className="field-label" htmlFor="packaging">Packaging details</label>
-                <textarea id="packaging" name="packaging" rows={2} defaultValue={product?.packaging ?? ""} className="field resize-y" />
-              </div>
-            </div>
-          </section>
-
-          <section className="surface rounded-xl p-5">
-            <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-ink/60">Images</h2>
-            <div className="mt-4">
-              <ImageField initial={product?.images.map((image) => image.url)} />
-            </div>
+          <section className="rounded-xl border border-black/7 bg-white p-4 md:p-5">
+            <h2 className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-[#a07f45]">Images</h2>
+            <ImageField initial={product?.images.map((image) => image.url) ?? []} />
           </section>
         </div>
 
         <div className="space-y-5">
-          <section className="surface rounded-xl p-5">
-            <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-ink/60">Visibility</h2>
-            <div className="mt-4 space-y-3">
-              <label className="flex items-center gap-2 text-xs text-ink/70">
-                <input type="checkbox" name="isActive" defaultChecked={product?.isActive ?? true} className="size-3.5 accent-[#0d1f3c]" />
-                Published on website
-              </label>
-              <label className="flex items-center gap-2 text-xs text-ink/70">
-                <input type="checkbox" name="isFeatured" defaultChecked={product?.isFeatured ?? false} className="size-3.5 accent-[#0d1f3c]" />
-                Feature on homepage
-              </label>
+          <section className="rounded-xl border border-black/7 bg-white p-4 md:p-5">
+            <h2 className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-[#a07f45]">Organisation</h2>
+            <div className="space-y-3">
+              <Select
+                label="Category"
+                name="categoryId"
+                defaultValue={product?.categoryId ?? ""}
+                options={[{ value: "", label: "Choose a category" }, ...categories.map((category) => ({ value: category.id, label: category.name }))]}
+              />
+              <div className="space-y-2">
+                <Check label="Featured on homepage" name="isFeatured" defaultChecked={product?.isFeatured ?? false} />
+                <Check label="Active (visible on site)" name="isActive" defaultChecked={product?.isActive ?? true} />
+                <Check label="Archived" name="isArchived" defaultChecked={product?.isArchived ?? false} hint="Hidden from catalogue and admin lists by default." />
+              </div>
             </div>
           </section>
 
-          <section className="rounded-xl border border-gold/30 bg-gold/8 p-5">
-            <p className="text-[0.6rem] font-semibold uppercase tracking-[0.14em] text-[#7a5c28]">Preview</p>
-            <p className="mt-2 text-xs leading-relaxed text-ink/60">
-              {product ? "Saving will update the live product page and any category listings." : "The product will appear in the catalogue as soon as it is published."}
-            </p>
+          <section className="rounded-xl border border-[#0d1f3c]/10 bg-[#0d1f3c]/[0.02] p-4">
+            <p className="text-[0.68rem] font-semibold text-[#0d1f3c]">Tips</p>
+            <ul className="mt-2 space-y-1.5 text-[0.65rem] leading-relaxed text-[#5c6270]">
+              <li>· The first image becomes the catalogue thumbnail.</li>
+              <li>· Leave price blank to show &ldquo;Price on request&rdquo;.</li>
+              <li>· Discounted price is shown as a strikethrough saving.</li>
+              <li>· Use tags to power search and filtering.</li>
+            </ul>
           </section>
-
-          <div className="lg:hidden">
-            <SubmitButton className="btn-base btn-navy w-full">
-              <Save className="size-4" /> {product ? "Save changes" : "Create product"}
-            </SubmitButton>
-          </div>
         </div>
       </div>
     </form>
+  );
+}
+
+function Field({
+  label,
+  name,
+  defaultValue,
+  placeholder,
+  type = "text",
+  step,
+  min,
+  hint,
+  className,
+}: {
+  label: string;
+  name: string;
+  defaultValue?: string | number | null;
+  placeholder?: string;
+  type?: string;
+  step?: string;
+  min?: string;
+  hint?: string;
+  className?: string;
+}) {
+  return (
+    <label className={`block ${className ?? ""}`}>
+      <span className="mb-1 block text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-[#6b7280]">{label}</span>
+      <input
+        name={name}
+        type={type}
+        step={step}
+        min={min}
+        defaultValue={defaultValue ?? ""}
+        placeholder={placeholder}
+        className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-[0.8rem] outline-none focus:border-[#0d1f3c] focus:ring-2 focus:ring-[#0d1f3c]/10"
+      />
+      {hint && <span className="mt-1 block text-[0.6rem] text-[#8b919d]">{hint}</span>}
+    </label>
+  );
+}
+
+function TextArea({
+  label,
+  name,
+  defaultValue,
+  rows = 3,
+  hint,
+  className,
+}: {
+  label: string;
+  name: string;
+  defaultValue?: string | null;
+  rows?: number;
+  hint?: string;
+  className?: string;
+}) {
+  return (
+    <label className={`block ${className ?? ""}`}>
+      <span className="mb-1 block text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-[#6b7280]">{label}</span>
+      <textarea
+        name={name}
+        rows={rows}
+        defaultValue={defaultValue ?? ""}
+        className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-[0.8rem] leading-relaxed outline-none focus:border-[#0d1f3c] focus:ring-2 focus:ring-[#0d1f3c]/10"
+      />
+      {hint && <span className="mt-1 block text-[0.6rem] text-[#8b919d]">{hint}</span>}
+    </label>
+  );
+}
+
+function Select({
+  label,
+  name,
+  defaultValue,
+  options,
+}: {
+  label: string;
+  name: string;
+  defaultValue?: string | number;
+  options: { value: string | number; label: string }[];
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-[#6b7280]">{label}</span>
+      <select
+        name={name}
+        defaultValue={defaultValue ?? ""}
+        className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-[0.8rem] outline-none focus:border-[#0d1f3c]"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function Check({
+  label,
+  name,
+  defaultChecked,
+  hint,
+}: {
+  label: string;
+  name: string;
+  defaultChecked?: boolean;
+  hint?: string;
+}) {
+  return (
+    <label className="flex items-start gap-2 rounded-lg border border-black/8 px-2.5 py-2">
+      <input type="checkbox" name={name} defaultChecked={defaultChecked} className="mt-0.5 size-3.5 accent-[#0d1f3c]" />
+      <span>
+        <span className="block text-[0.72rem] font-medium text-[#14161a]">{label}</span>
+        {hint && <span className="block text-[0.6rem] text-[#8b919d]">{hint}</span>}
+      </span>
+    </label>
   );
 }

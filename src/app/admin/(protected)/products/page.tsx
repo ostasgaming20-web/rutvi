@@ -1,27 +1,43 @@
 import Link from "next/link";
 import Image from "next/image";
-import { and, asc, count, eq, ilike, or } from "drizzle-orm";
-import { ArrowUpRight, Eye, EyeOff, Plus, Search, Star, Trash2 } from "lucide-react";
+import { and, asc, count, desc, eq, ilike, or, inArray } from "drizzle-orm";
+import { Eye, EyeOff, ImageOff, Plus, Search, Star } from "lucide-react";
 import { db } from "@/lib/db";
 import { categories, productImages, products } from "@/lib/db/schema";
+import { requireCapability } from "@/lib/admin";
+import { bulkProductAction, toggleProductFlag } from "@/app/admin/catalogue-actions";
 import { formatINR } from "@/lib/format";
-import { deleteProduct, toggleProductFlag } from "@/app/admin/actions";
-import { ConfirmSubmit } from "@/components/admin/confirm-submit";
+import { PageHeader, Panel, EmptyState, ButtonLink, Tag, Th, Td, TableWrap } from "@/components/admin/ui";
+import { AdminSubmit } from "@/components/admin/admin-submit";
+import { BulkSelectAll } from "@/components/admin/bulk-select";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminProductsPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await requireCapability("products.manage");
   const params = await searchParams;
   const q = typeof params.q === "string" ? params.q : "";
   const categoryId = typeof params.category === "string" ? Number(params.category) : 0;
+  const status = typeof params.status === "string" ? params.status : "";
+  const page = Math.max(1, Number(params.page) || 1);
+  const pageSize = 20;
 
-  const conditions = [];
+  const conditions = [eq(products.productType, "product")];
   if (q) conditions.push(or(ilike(products.name, `%${q}%`), ilike(products.sku, `%${q}%`))!);
   if (categoryId) conditions.push(eq(products.categoryId, categoryId));
+  if (status === "active") conditions.push(eq(products.isActive, true));
+  if (status === "inactive") conditions.push(eq(products.isActive, false));
+  if (status === "featured") conditions.push(eq(products.isFeatured, true));
+  if (status === "archived") conditions.push(eq(products.isArchived, true));
+  else conditions.push(eq(products.isArchived, false));
 
-  const [rows, categoryRows, totals] = await Promise.all([
+  const where = and(...conditions);
+
+  const [rows, categoryRows, totalRow] = await Promise.all([
     db
       .select({
         id: products.id,
@@ -29,181 +45,223 @@ export default async function AdminProductsPage({
         slug: products.slug,
         sku: products.sku,
         pricePaise: products.pricePaise,
+        discountPricePaise: products.discountPricePaise,
         minOrderQty: products.minOrderQty,
         isActive: products.isActive,
         isFeatured: products.isFeatured,
-        productType: products.productType,
+        isArchived: products.isArchived,
+        viewCount: products.viewCount,
         categoryName: categories.name,
       })
       .from(products)
       .innerJoin(categories, eq(products.categoryId, categories.id))
-      .where(conditions.length ? and(...conditions) : undefined)
-      .orderBy(asc(products.sortOrder), asc(products.id)),
-    db.select({ id: categories.id, name: categories.name }).from(categories).orderBy(asc(categories.sortOrder)),
-    db.select({ value: count() }).from(products),
+      .where(where)
+      .orderBy(asc(products.sortOrder), desc(products.updatedAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
+    db.select({ id: categories.id, name: categories.name }).from(categories).where(eq(categories.kind, "product")).orderBy(asc(categories.sortOrder)),
+    db.select({ value: count() }).from(products).where(where),
   ]);
 
-  const images = rows.length
+  const ids = rows.map((row) => row.id);
+  const images = ids.length
     ? await db
         .select({ productId: productImages.productId, url: productImages.url, sortOrder: productImages.sortOrder })
         .from(productImages)
+        .where(inArray(productImages.productId, ids))
         .orderBy(asc(productImages.sortOrder))
     : [];
   const imageMap = new Map<number, string>();
   for (const image of images) if (!imageMap.has(image.productId)) imageMap.set(image.productId, image.url);
 
+  const total = Number(totalRow[0].value);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const buildHref = (nextPage: number) => {
+    const query = new URLSearchParams();
+    if (q) query.set("q", q);
+    if (categoryId) query.set("category", String(categoryId));
+    if (status) query.set("status", status);
+    query.set("page", String(nextPage));
+    return `/admin/products?${query.toString()}`;
+  };
+
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-gold">Catalogue</p>
-          <h1 className="display mt-1 text-4xl text-ink">Products</h1>
-          <p className="mt-1 text-sm text-ink/50">{Number(totals[0].value)} products in the catalogue.</p>
-        </div>
-        <Link href="/admin/products/new" className="btn-base btn-navy !min-h-10 !px-5 !text-[0.65rem]">
-          <Plus className="size-4" /> Add product
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow="Catalogue"
+        title="Product Management"
+        description={`${total} product${total === 1 ? "" : "s"} in this view. Manage pricing, imagery, availability and visibility.`}
+        actions={
+          <>
+            <ButtonLink href="/admin/categories" variant="ghost">Categories</ButtonLink>
+            <ButtonLink href="/admin/products/new">
+              <Plus className="size-3.5" /> Add product
+            </ButtonLink>
+          </>
+        }
+      />
 
-      <form className="surface flex flex-wrap items-center gap-2 rounded-xl p-3" action="/admin/products">
-        <div className="relative min-w-48 flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone" />
-          <input name="q" defaultValue={q} placeholder="Search products or SKU…" className="field !min-h-10 pl-9 text-xs" aria-label="Search products" />
-        </div>
-        <select name="category" defaultValue={categoryId || ""} className="field !min-h-10 w-auto text-xs" aria-label="Filter by category">
-          <option value="">All categories</option>
-          {categoryRows.map((category) => (
-            <option key={category.id} value={category.id}>{category.name}</option>
-          ))}
-        </select>
-        <button type="submit" className="btn-base btn-navy !min-h-10 !px-4 !text-[0.62rem]">Filter</button>
-        {(q || categoryId) && (
-          <Link href="/admin/products" className="text-[0.62rem] uppercase tracking-[0.08em] text-stone underline underline-offset-4">Clear</Link>
-        )}
-      </form>
-
-      {rows.length === 0 ? (
-        <div className="surface rounded-xl p-12 text-center">
-          <p className="text-sm font-medium text-ink">No products match this view.</p>
-          <p className="mt-1 text-xs text-stone">Try a different search, or add a new product.</p>
-          <Link href="/admin/products/new" className="btn-base btn-navy mt-5">Add product</Link>
-        </div>
-      ) : (
-        <>
-          <div className="surface hidden overflow-hidden rounded-xl md:block">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-ink/8 text-[0.58rem] uppercase tracking-[0.12em] text-stone">
-                  <th className="px-4 py-3 font-medium">Product</th>
-                  <th className="px-4 py-3 font-medium">Category</th>
-                  <th className="px-4 py-3 font-medium">Price</th>
-                  <th className="px-4 py-3 font-medium">MOQ</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 text-right font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-ink/7">
-                {rows.map((product) => (
-                  <tr key={product.id} className="text-xs hover:bg-cream/30">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="relative size-11 shrink-0 overflow-hidden rounded-lg bg-cream">
-                          {imageMap.get(product.id) && (
-                            <Image src={imageMap.get(product.id)!} alt="" fill sizes="44px" className="object-cover" unoptimized />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <Link href={`/admin/products/${product.id}`} className="block truncate font-medium text-ink hover:text-navy">
-                            {product.name}
-                          </Link>
-                          <p className="text-[0.6rem] text-stone">{product.sku} · {product.productType}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-ink/60">{product.categoryName}</td>
-                    <td className="px-4 py-3 font-medium text-navy">{formatINR(product.pricePaise)}</td>
-                    <td className="px-4 py-3 text-ink/60">{product.minOrderQty}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        <span className={`rounded-full border px-2 py-0.5 text-[0.55rem] ${product.isActive ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-stone-200 bg-stone-100 text-stone-600"}`}>
-                          {product.isActive ? "Live" : "Hidden"}
-                        </span>
-                        {product.isFeatured && (
-                          <span className="rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-[0.55rem] text-[#7a5c28]">Featured</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <form action={toggleProductFlag}>
-                          <input type="hidden" name="id" value={product.id} />
-                          <input type="hidden" name="field" value="isActive" />
-                          <button type="submit" aria-label={product.isActive ? "Hide product" : "Publish product"} className="grid size-7 place-items-center rounded-md text-stone hover:bg-cream hover:text-navy">
-                            {product.isActive ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                          </button>
-                        </form>
-                        <form action={toggleProductFlag}>
-                          <input type="hidden" name="id" value={product.id} />
-                          <input type="hidden" name="field" value="isFeatured" />
-                          <button type="submit" aria-label={product.isFeatured ? "Unfeature product" : "Feature product"} className={`grid size-7 place-items-center rounded-md hover:bg-cream ${product.isFeatured ? "text-gold" : "text-stone hover:text-navy"}`}>
-                            <Star className="size-3.5" />
-                          </button>
-                        </form>
-                        <Link href={`/products/${product.slug}`} target="_blank" aria-label="View product" className="grid size-7 place-items-center rounded-md text-stone hover:bg-cream hover:text-navy">
-                          <ArrowUpRight className="size-3.5" />
-                        </Link>
-                        <Link href={`/admin/products/${product.id}`} className="rounded-md px-2 py-1 text-[0.6rem] font-medium text-navy hover:bg-cream">
-                          Edit
-                        </Link>
-                        <form action={deleteProduct}>
-                          <input type="hidden" name="id" value={product.id} />
-                          <ConfirmSubmit
-                            message={`Delete "${product.name}"? This removes it from the website and cannot be undone.`}
-                            className="grid size-7 place-items-center rounded-md text-stone hover:bg-red-50 hover:text-red-700"
-                          />
-                        </form>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="grid gap-3 md:hidden">
-            {rows.map((product) => (
-              <div key={product.id} className="surface rounded-xl p-3">
-                <div className="flex gap-3">
-                  <div className="relative size-14 shrink-0 overflow-hidden rounded-lg bg-cream">
-                    {imageMap.get(product.id) && <Image src={imageMap.get(product.id)!} alt="" fill sizes="56px" className="object-cover" unoptimized />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-ink">{product.name}</p>
-                    <p className="text-[0.62rem] text-stone">{product.categoryName} · {product.sku}</p>
-                    <p className="mt-1 text-xs font-medium text-navy">{formatINR(product.pricePaise)} · MOQ {product.minOrderQty}</p>
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center gap-2 border-t border-ink/7 pt-2">
-                  <Link href={`/admin/products/${product.id}`} className="rounded-md bg-cream px-3 py-1.5 text-[0.62rem] font-medium text-navy">Edit</Link>
-                  <form action={toggleProductFlag}>
-                    <input type="hidden" name="id" value={product.id} />
-                    <input type="hidden" name="field" value="isActive" />
-                    <button type="submit" className="rounded-md border border-ink/10 px-3 py-1.5 text-[0.62rem] text-ink/60">
-                      {product.isActive ? "Hide" : "Publish"}
-                    </button>
-                  </form>
-                  <form action={deleteProduct} className="ml-auto">
-                    <input type="hidden" name="id" value={product.id} />
-                    <ConfirmSubmit message={`Delete "${product.name}"? This cannot be undone.`} className="grid size-8 place-items-center rounded-md text-stone hover:bg-red-50 hover:text-red-700">
-                      <Trash2 className="size-3.5" />
-                    </ConfirmSubmit>
-                  </form>
-                </div>
-              </div>
+      <Panel>
+        <form method="get" className="flex flex-wrap items-end gap-2 border-b border-black/6 p-3">
+          <label className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-black/30" />
+            <input
+              name="q"
+              defaultValue={q}
+              placeholder="Search name or SKU…"
+              className="w-full rounded-lg border border-black/10 bg-white py-2 pl-8 pr-3 text-[0.75rem] outline-none focus:border-[#0d1f3c]"
+            />
+          </label>
+          <select name="category" defaultValue={categoryId || ""} className="rounded-lg border border-black/10 bg-white px-2.5 py-2 text-[0.72rem] outline-none">
+            <option value="">All categories</option>
+            {categoryRows.map((category) => (
+              <option key={category.id} value={category.id}>{category.name}</option>
             ))}
+          </select>
+          <select name="status" defaultValue={status} className="rounded-lg border border-black/10 bg-white px-2.5 py-2 text-[0.72rem] outline-none">
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="featured">Featured</option>
+            <option value="archived">Archived</option>
+          </select>
+          <button type="submit" className="rounded-lg bg-[#0d1f3c] px-3 py-2 text-[0.7rem] font-semibold text-white hover:bg-[#1b3358]">
+            Filter
+          </button>
+          {(q || categoryId || status) && (
+            <Link href="/admin/products" className="text-[0.68rem] text-[#8b919d] hover:text-[#0d1f3c]">Reset</Link>
+          )}
+        </form>
+
+        {rows.length === 0 ? (
+          <EmptyState
+            title="No products found"
+            description={q || categoryId || status ? "Try a different search or filter." : "Add your first product to get started."}
+            action={<ButtonLink href="/admin/products/new"><Plus className="size-3.5" /> Add product</ButtonLink>}
+          />
+        ) : (
+          <form action={bulkProductAction}>
+            <div className="flex flex-wrap items-center gap-2 border-b border-black/6 bg-black/[0.015] px-3 py-2">
+              <select name="bulkAction" className="rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[0.68rem] outline-none">
+                <option value="activate">Set active</option>
+                <option value="deactivate">Set inactive</option>
+                <option value="feature">Mark featured</option>
+                <option value="unfeature">Remove featured</option>
+                <option value="archive">Archive</option>
+                <option value="delete">Delete</option>
+              </select>
+              <AdminSubmit size="sm" variant="ghost">Apply to selected</AdminSubmit>
+              <span className="text-[0.62rem] text-[#8b919d]">Tick rows to bulk edit.</span>
+            </div>
+
+            <TableWrap>
+              <table className="w-full min-w-[760px]">
+                <thead>
+                  <tr>
+                    <Th className="w-8"><BulkSelectAll total={rows.length} /></Th>
+                    <Th>Product</Th>
+                    <Th>Category</Th>
+                    <Th>Price</Th>
+                    <Th>Views</Th>
+                    <Th>Status</Th>
+                    <Th className="text-right">Actions</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.id} className="hover:bg-black/[0.015]">
+                      <Td><input type="checkbox" name="ids" value={row.id} aria-label={`Select ${row.name}`} className="size-3.5 accent-[#0d1f3c]" /></Td>
+                      <Td>
+                        <div className="flex items-center gap-2.5">
+                          <span className="relative size-9 shrink-0 overflow-hidden rounded-md border border-black/8 bg-black/4">
+                            {imageMap.get(row.id) ? (
+                              <Image src={imageMap.get(row.id)!} alt="" fill sizes="36px" className="object-cover" unoptimized />
+                            ) : (
+                              <span className="grid size-full place-items-center text-black/20"><ImageOff className="size-3.5" /></span>
+                            )}
+                          </span>
+                          <div className="min-w-0">
+                            <Link href={`/admin/products/${row.id}`} className="block max-w-[240px] truncate text-[0.76rem] font-medium text-[#14161a] hover:text-[#0d1f3c]">
+                              {row.name}
+                            </Link>
+                            <p className="text-[0.6rem] text-[#8b919d]">{row.sku} · MOQ {row.minOrderQty}</p>
+                          </div>
+                        </div>
+                      </Td>
+                      <Td className="text-[0.7rem]">{row.categoryName}</Td>
+                      <Td>
+                        <span className="text-[0.72rem] font-medium text-[#14161a]">{formatINR(row.pricePaise)}</span>
+                        {row.discountPricePaise ? (
+                          <span className="ml-1 text-[0.6rem] text-emerald-700">{formatINR(row.discountPricePaise)}</span>
+                        ) : null}
+                      </Td>
+                      <Td className="text-[0.7rem]">{row.viewCount}</Td>
+                      <Td>
+                        <div className="flex flex-wrap gap-1">
+                          {row.isArchived ? <Tag tone="neutral">Archived</Tag> : row.isActive ? <Tag tone="green">Active</Tag> : <Tag tone="red">Inactive</Tag>}
+                          {row.isFeatured && <Tag tone="gold">Featured</Tag>}
+                        </div>
+                      </Td>
+                      <Td>
+                        <div className="flex items-center justify-end gap-1">
+                          <Toggle action={toggleProductFlag} id={row.id} field="isActive" active={row.isActive} label={row.isActive ? "Hide" : "Show"} icon={row.isActive ? Eye : EyeOff} />
+                          <Toggle action={toggleProductFlag} id={row.id} field="isFeatured" active={row.isFeatured} label="Feature" icon={Star} />
+                          <Link href={`/admin/products/${row.id}`} className="rounded-md px-2 py-1 text-[0.62rem] font-semibold text-[#0d1f3c] hover:bg-[#0d1f3c]/5">
+                            Edit
+                          </Link>
+                        </div>
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableWrap>
+          </form>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-black/6 px-3 py-2.5">
+            <p className="text-[0.65rem] text-[#8b919d]">Page {page} of {totalPages}</p>
+            <div className="flex gap-1.5">
+              {page > 1 && <Link href={buildHref(page - 1)} className="rounded-md border border-black/10 px-2.5 py-1 text-[0.65rem] hover:border-black/25">Previous</Link>}
+              {page < totalPages && <Link href={buildHref(page + 1)} className="rounded-md border border-black/10 px-2.5 py-1 text-[0.65rem] hover:border-black/25">Next</Link>}
+            </div>
           </div>
-        </>
-      )}
+        )}
+      </Panel>
     </div>
+  );
+}
+
+function Toggle({
+  action,
+  id,
+  field,
+  active,
+  label,
+  icon: Icon,
+}: {
+  action: (formData: FormData) => void | Promise<void>;
+  id: number;
+  field: string;
+  active: boolean;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <form action={action} className="inline">
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="field" value={field} />
+      <button
+        type="submit"
+        title={label}
+        aria-label={label}
+        className={`grid size-6 place-items-center rounded-md transition-colors ${
+          active ? "bg-[#c3a068]/15 text-[#8a6a33] hover:bg-[#c3a068]/25" : "text-black/30 hover:bg-black/5 hover:text-black/60"
+        }`}
+      >
+        <Icon className="size-3" />
+      </button>
+    </form>
   );
 }
