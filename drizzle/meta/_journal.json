@@ -8,6 +8,13 @@
       "when": 1795187293777,
       "tag": "0000_equal_nightshade",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795496461277,
+      "tag": "0001_confused_black_queen",
+      "breakpoints": true
     }
   ]
 }
