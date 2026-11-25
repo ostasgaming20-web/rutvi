@@ -2,10 +2,18 @@ import type { MetadataRoute } from "next";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { categories, products } from "@/lib/db/schema";
+import { getSettings } from "@/lib/settings";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://rutvienterprise.in";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  try {
+    const settings = await getSettings();
+    if (!settings.seo.sitemapEnabled || !settings.seo.indexSite) return [];
+  } catch {
+    /* fall through to default sitemap */
+  }
+
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${BASE_URL}/`, changeFrequency: "weekly", priority: 1 },
     { url: `${BASE_URL}/products`, changeFrequency: "weekly", priority: 0.9 },

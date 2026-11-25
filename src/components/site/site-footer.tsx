@@ -3,7 +3,7 @@ import { ArrowUpRight, Instagram, Linkedin, Mail, MapPin, Phone } from "lucide-r
 import { Logo } from "@/components/site/logo";
 import type { ContactSettings, FooterSettings } from "@/lib/settings";
 
-const links = [
+const defaultLinks = [
   { label: "Products", href: "/products" },
   { label: "Customize Your Gift", href: "/customize" },
   { label: "Hampers & Gift Sets", href: "/hampers" },
@@ -16,9 +16,11 @@ const links = [
 export function SiteFooter({
   contact,
   footer,
+  links = defaultLinks,
 }: {
   contact: ContactSettings;
   footer: FooterSettings;
+  links?: { label: string; href: string }[];
 }) {
   return (
     <footer className="relative overflow-hidden bg-navy text-ivory">

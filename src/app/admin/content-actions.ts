@@ -276,7 +276,9 @@ export async function updateHomepageSection(formData: FormData) {
 
   await logAudit({ actorEmail: admin.session.user.email, action: "homepage.section.update", entity: "homepage_section", entityId: id });
   revalidatePath("/admin/homepage");
-  redirect(redirectPath("/admin/homepage", { ok: "Section saved as draft." }));
+  revalidatePath("/admin/editor");
+  const returnTo = text(formData, "returnTo") || "/admin/homepage";
+  redirect(redirectPath(returnTo, { ok: "Section saved as draft." }));
 }
 
 export async function reorderHomepageSections(formData: FormData) {

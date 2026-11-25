@@ -9,8 +9,9 @@ import { cn } from "@/lib/utils";
 import type { ContactSettings } from "@/lib/settings";
 
 type NavCategory = { id: number; name: string; slug: string };
+type NavItem = { id: number; label: string; href: string; badge: string | null };
 
-const nav = [
+const defaultNav = [
   { label: "Home", href: "/" },
   { label: "Products", href: "/products", dropdown: true },
   { label: "Customize Your Gift", href: "/customize" },
@@ -23,10 +24,23 @@ const nav = [
 export function SiteHeader({
   categories,
   contact,
+  navItems,
+  announcement,
 }: {
   categories: NavCategory[];
   contact: ContactSettings;
+  navItems?: NavItem[];
+  announcement?: { text: string; href: string | null; id: number } | null;
 }) {
+  const nav: { label: string; href: string; dropdown?: boolean; badge?: string | null }[] =
+    navItems && navItems.length > 0
+      ? navItems.map((item) => ({
+          label: item.label,
+          href: item.href,
+          dropdown: item.href === "/products",
+          badge: item.badge,
+        }))
+      : defaultNav;
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -64,6 +78,19 @@ export function SiteHeader({
 
   return (
     <>
+      {announcement?.text ? (
+        <div className="bg-[#c3a068] text-[#14161a]">
+          <div className="container-lux flex min-h-8 items-center justify-center gap-2 py-1.5 text-center text-[0.64rem] font-medium tracking-[0.08em]">
+            {announcement.href ? (
+              <Link href={announcement.href} className="inline-flex items-center gap-1.5 hover:underline">
+                {announcement.text} <ArrowUpRight className="size-3" />
+              </Link>
+            ) : (
+              <span>{announcement.text}</span>
+            )}
+          </div>
+        </div>
+      ) : null}
       <div className="hidden bg-navy text-ivory/80 md:block">
         <div className="container-lux flex h-9 items-center justify-between text-[0.66rem] tracking-[0.14em] uppercase">
           <p>Premium corporate gifting · Mumbai · Delivery across India</p>
@@ -146,6 +173,9 @@ export function SiteHeader({
                   )}
                 >
                   {item.label}
+                  {item.badge ? (
+                    <span className="ml-1 rounded-full bg-gold/20 px-1.5 py-0.5 text-[0.5rem] font-semibold tracking-normal text-[#8a6a33]">{item.badge}</span>
+                  ) : null}
                 </Link>
               ),
             )}

@@ -8,6 +8,7 @@ import { formatINR } from "@/lib/format";
 import { buildWhatsAppUrl, productEnquiryMessage } from "@/lib/whatsapp";
 import { ProductGallery } from "@/components/site/product-gallery";
 import { ProductCard } from "@/components/site/product-card";
+import { AnalyticsBeacon } from "@/components/site/analytics-beacon";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -61,6 +62,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <>
+      <AnalyticsBeacon type="product_view" productId={product.id} path={`/products/${product.slug}`} />
       <section className="py-8 md:py-12">
         <div className="container-lux">
           <nav className="flex flex-wrap items-center gap-2 text-[0.62rem] uppercase tracking-[0.12em] text-stone" aria-label="Breadcrumb">
